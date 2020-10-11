@@ -188,6 +188,16 @@ var queryType = graphql.NewObject(
 					return nil, nil
 				},
 			},
+			/* Get (read) product list
+			   http://localhost:8080/order?query={orderlist{id,orderdate,products{id,price}}}
+			*/
+			"orderlist": &graphql.Field{
+				Type:        graphql.NewList(orderType),
+				Description: "Get order list",
+				Resolve: func(params graphql.ResolveParams) (interface{}, error) {
+					return orders, nil
+				},
+			},
 		},
 	})
 
