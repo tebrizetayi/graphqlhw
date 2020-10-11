@@ -18,6 +18,12 @@ type Product struct {
 	Price float64 `json:"price"`
 }
 
+type Order struct {
+	ID        int64     `json:"id"`
+	OrderDate time.Time `json:"orderDate"`
+	Products  []Product `json:"products"`
+}
+
 var products = []Product{
 	{
 		ID:    1,
@@ -33,9 +39,55 @@ var products = []Product{
 	},
 	{
 		ID:    3,
-		Name:  "Pisco",
-		Info:  "Pisco is a colorless or yellowish-to-amber colored brandy produced in winemaking regions of Peru and Chile (wiki)",
-		Price: 9.95,
+		Name:  "Cisco",
+		Info:  "Cisco is a colorless or yellowish-to-amber colored brandy produced in winemaking regions of Peru and Chile (wiki)",
+		Price: 34.95,
+	},
+	{
+		ID:    4,
+		Name:  "Xisco",
+		Info:  "Xisco is a colorless or yellowish-to-amber colored brandy produced in winemaking regions of Peru and Chile (wiki)",
+		Price: 23.95,
+	},
+	{
+		ID:    5,
+		Name:  "Disco",
+		Info:  "Disco is a colorless or yellowish-to-amber colored brandy produced in winemaking regions of Peru and Chile (wiki)",
+		Price: 45.95,
+	},
+	{
+		ID:    6,
+		Name:  "Moook",
+		Info:  "Moook is a colorless or yellowish-to-amber colored brandy produced in winemaking regions of Peru and Chile (wiki)",
+		Price: 3.95,
+	},
+}
+
+var orders = []Order{
+	{
+		ID:        1,
+		OrderDate: time.Now(),
+		Products:  []Product{products[0], products[2], products[3]},
+	},
+	{
+		ID:        2,
+		OrderDate: time.Now(),
+		Products:  []Product{products[1], products[5]},
+	},
+	{
+		ID:        3,
+		OrderDate: time.Now(),
+		Products:  []Product{products[1], products[3]},
+	},
+	{
+		ID:        4,
+		OrderDate: time.Now(),
+		Products:  []Product{products[4], products[5]},
+	},
+	{
+		ID:        5,
+		OrderDate: time.Now(),
+		Products:  []Product{products[2], products[0]},
 	},
 }
 
@@ -58,6 +110,21 @@ var productType = graphql.NewObject(
 		},
 	},
 )
+
+var orderType = graphql.NewObject(graphql.ObjectConfig{
+	Name: "Product",
+	Fields: graphql.Fields{
+		"id": &graphql.Field{
+			Type: graphql.Int,
+		},
+		"orderdate": &graphql.Field{
+			Type: graphql.DateTime,
+		},
+		"products": &graphql.Field{
+			Type: graphql.NewList(productType),
+		},
+	},
+})
 
 var queryType = graphql.NewObject(
 	graphql.ObjectConfig{
@@ -95,6 +162,30 @@ var queryType = graphql.NewObject(
 				Description: "Get product list",
 				Resolve: func(params graphql.ResolveParams) (interface{}, error) {
 					return products, nil
+				},
+			},
+			/* Get (read) single order by id
+			   http://localhost:8080/order?query={order(id:1){id,orderdate,products{id,price}}}
+			*/
+			"order": &graphql.Field{
+				Type:        orderType,
+				Description: "Get orders by Id",
+				Args: graphql.FieldConfigArgument{
+					"id": &graphql.ArgumentConfig{
+						Type: graphql.Int,
+					},
+				},
+				Resolve: func(p graphql.ResolveParams) (interface{}, error) {
+					id, ok := p.Args["id"].(int)
+					if ok {
+						// Find product
+						for _, order := range orders {
+							if int(order.ID) == id {
+								return order, nil
+							}
+						}
+					}
+					return nil, nil
 				},
 			},
 		},
@@ -226,6 +317,10 @@ func executeQuery(query string, schema graphql.Schema) *graphql.Result {
 
 func main() {
 	http.HandleFunc("/product", func(w http.ResponseWriter, r *http.Request) {
+		result := executeQuery(r.URL.Query().Get("query"), schema)
+		json.NewEncoder(w).Encode(result)
+	})
+	http.HandleFunc("/order", func(w http.ResponseWriter, r *http.Request) {
 		result := executeQuery(r.URL.Query().Get("query"), schema)
 		json.NewEncoder(w).Encode(result)
 	})
